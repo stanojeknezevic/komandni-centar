@@ -361,8 +361,11 @@
     }
 
     function izracunajNiz(dani) {
-      let niz = 0;
       const datum = new Date();
+      if (!dani.includes(formatDatum(datum))) {
+        datum.setDate(datum.getDate() - 1);
+      }
+      let niz = 0;
       while (dani.includes(formatDatum(datum))) {
         niz++;
         datum.setDate(datum.getDate() - 1);

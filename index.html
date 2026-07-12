@@ -78,6 +78,87 @@
   #sekcija-statistika {
     grid-column: 1 / span 2;
   }
+
+  .unos-red {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .unos-red input {
+    flex: 1;
+    padding: 10px 12px;
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+
+  .unos-red input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .unos-red button {
+    padding: 10px 18px;
+    background-color: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #0b1220;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  .unos-red button:hover {
+    opacity: 0.9;
+  }
+
+  #lista-zadataka {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #lista-zadataka li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  #lista-zadataka li span {
+    flex: 1;
+    word-break: break-word;
+  }
+
+  #lista-zadataka li.zavrsen span {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+
+  #lista-zadataka li button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+
+  #lista-zadataka li button:hover {
+    color: var(--accent);
+  }
 </style>
 </head>
 <body>
@@ -90,6 +171,11 @@
   <main>
     <section id="sekcija-zadaci">
       <h2>Zadaci</h2>
+      <div class="unos-red">
+        <input type="text" id="unos-zadatak" placeholder="Novi zadatak...">
+        <button id="dugme-dodaj">Dodaj</button>
+      </div>
+      <ul id="lista-zadataka"></ul>
     </section>
 
     <section id="sekcija-navike">
@@ -106,6 +192,69 @@
     const danas = new Date();
     const opcije = { weekday: "long", year: "numeric", month: "long", day: "numeric" };
     elementDatum.textContent = danas.toLocaleDateString("sr-Latn-RS", opcije);
+
+    const KLJUC_ZADACI = "komandni-centar-zadaci";
+    const unosZadatak = document.getElementById("unos-zadatak");
+    const dugmeDodaj = document.getElementById("dugme-dodaj");
+    const listaZadataka = document.getElementById("lista-zadataka");
+
+    function ucitajZadatke() {
+      const sacuvano = localStorage.getItem(KLJUC_ZADACI);
+      return sacuvano ? JSON.parse(sacuvano) : [];
+    }
+
+    function sacuvajZadatke(zadaci) {
+      localStorage.setItem(KLJUC_ZADACI, JSON.stringify(zadaci));
+    }
+
+    let zadaci = ucitajZadatke();
+
+    function iscrtajZadatke() {
+      listaZadataka.innerHTML = "";
+      zadaci.forEach((zadatak, indeks) => {
+        const stavka = document.createElement("li");
+        if (zadatak.zavrsen) stavka.classList.add("zavrsen");
+
+        const tekst = document.createElement("span");
+        tekst.textContent = zadatak.tekst;
+
+        const dugmeObrisi = document.createElement("button");
+        dugmeObrisi.textContent = "×";
+        dugmeObrisi.addEventListener("click", (dogadjaj) => {
+          dogadjaj.stopPropagation();
+          zadaci.splice(indeks, 1);
+          sacuvajZadatke(zadaci);
+          iscrtajZadatke();
+        });
+
+        stavka.addEventListener("click", () => {
+          zadatak.zavrsen = !zadatak.zavrsen;
+          sacuvajZadatke(zadaci);
+          iscrtajZadatke();
+        });
+
+        stavka.appendChild(tekst);
+        stavka.appendChild(dugmeObrisi);
+        listaZadataka.appendChild(stavka);
+      });
+    }
+
+    function dodajZadatak() {
+      const vrednost = unosZadatak.value.trim();
+      if (!vrednost) return;
+      zadaci.push({ tekst: vrednost, zavrsen: false });
+      sacuvajZadatke(zadaci);
+      iscrtajZadatke();
+      unosZadatak.value = "";
+      unosZadatak.focus();
+    }
+
+    dugmeDodaj.addEventListener("click", dodajZadatak);
+    unosZadatak.addEventListener("keydown", (dogadjaj) => {
+      if (dogadjaj.key === "Enter") dodajZadatak();
+    });
+
+    iscrtajZadatke();
   </script>
 
 </body>

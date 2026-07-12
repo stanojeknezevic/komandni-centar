@@ -159,6 +159,83 @@
   #lista-zadataka li button:hover {
     color: var(--accent);
   }
+
+  #lista-navika {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  #lista-navika li {
+    padding: 12px;
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .navika-zaglavlje {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .navika-naziv {
+    flex: 1;
+    word-break: break-word;
+  }
+
+  .navika-niz {
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .navika-zaglavlje button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+
+  .navika-zaglavlje button:hover {
+    color: var(--accent);
+  }
+
+  .krugovi {
+    display: flex;
+    gap: 8px;
+  }
+
+  .krug {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    box-sizing: border-box;
+  }
+
+  .krug.popunjen {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .krug.danas {
+    border-color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .krug.danas:hover {
+    border-color: var(--accent);
+  }
 </style>
 </head>
 <body>
@@ -180,6 +257,11 @@
 
     <section id="sekcija-navike">
       <h2>Navike</h2>
+      <div class="unos-red">
+        <input type="text" id="unos-navika" placeholder="Nova navika...">
+        <button id="dugme-dodaj-navika">Dodaj</button>
+      </div>
+      <ul id="lista-navika"></ul>
     </section>
 
     <section id="sekcija-statistika">
@@ -255,6 +337,126 @@
     });
 
     iscrtajZadatke();
+
+    const KLJUC_NAVIKE = "komandni-centar-navike";
+    const unosNavika = document.getElementById("unos-navika");
+    const dugmeDodajNavika = document.getElementById("dugme-dodaj-navika");
+    const listaNavika = document.getElementById("lista-navika");
+
+    function formatDatum(datum) {
+      const godina = datum.getFullYear();
+      const mesec = String(datum.getMonth() + 1).padStart(2, "0");
+      const dan = String(datum.getDate()).padStart(2, "0");
+      return `${godina}-${mesec}-${dan}`;
+    }
+
+    function poslednjihSedamDana() {
+      const dani = [];
+      for (let i = 6; i >= 0; i--) {
+        const datum = new Date();
+        datum.setDate(datum.getDate() - i);
+        dani.push(formatDatum(datum));
+      }
+      return dani;
+    }
+
+    function izracunajNiz(dani) {
+      let niz = 0;
+      const datum = new Date();
+      while (dani.includes(formatDatum(datum))) {
+        niz++;
+        datum.setDate(datum.getDate() - 1);
+      }
+      return niz;
+    }
+
+    function ucitajNavike() {
+      const sacuvano = localStorage.getItem(KLJUC_NAVIKE);
+      return sacuvano ? JSON.parse(sacuvano) : [];
+    }
+
+    function sacuvajNavike(navike) {
+      localStorage.setItem(KLJUC_NAVIKE, JSON.stringify(navike));
+    }
+
+    let navike = ucitajNavike();
+
+    function iscrtajNavike() {
+      listaNavika.innerHTML = "";
+      const danas = formatDatum(new Date());
+      const poslednjihDana = poslednjihSedamDana();
+
+      navike.forEach((navika, indeks) => {
+        const stavka = document.createElement("li");
+
+        const zaglavlje = document.createElement("div");
+        zaglavlje.className = "navika-zaglavlje";
+
+        const naziv = document.createElement("span");
+        naziv.className = "navika-naziv";
+        naziv.textContent = navika.naziv;
+
+        const niz = document.createElement("span");
+        niz.className = "navika-niz";
+        niz.textContent = `🔥 ${izracunajNiz(navika.dani)}`;
+
+        const dugmeObrisi = document.createElement("button");
+        dugmeObrisi.textContent = "×";
+        dugmeObrisi.addEventListener("click", () => {
+          navike.splice(indeks, 1);
+          sacuvajNavike(navike);
+          iscrtajNavike();
+        });
+
+        zaglavlje.appendChild(naziv);
+        zaglavlje.appendChild(niz);
+        zaglavlje.appendChild(dugmeObrisi);
+
+        const krugovi = document.createElement("div");
+        krugovi.className = "krugovi";
+
+        poslednjihDana.forEach((datumString) => {
+          const krug = document.createElement("div");
+          krug.className = "krug";
+          if (navika.dani.includes(datumString)) krug.classList.add("popunjen");
+          if (datumString === danas) {
+            krug.classList.add("danas");
+            krug.addEventListener("click", () => {
+              const pozicija = navika.dani.indexOf(danas);
+              if (pozicija === -1) {
+                navika.dani.push(danas);
+              } else {
+                navika.dani.splice(pozicija, 1);
+              }
+              sacuvajNavike(navike);
+              iscrtajNavike();
+            });
+          }
+          krugovi.appendChild(krug);
+        });
+
+        stavka.appendChild(zaglavlje);
+        stavka.appendChild(krugovi);
+        listaNavika.appendChild(stavka);
+      });
+    }
+
+    function dodajNaviku() {
+      const vrednost = unosNavika.value.trim();
+      if (!vrednost) return;
+      navike.push({ naziv: vrednost, dani: [] });
+      sacuvajNavike(navike);
+      iscrtajNavike();
+      unosNavika.value = "";
+      unosNavika.focus();
+    }
+
+    dugmeDodajNavika.addEventListener("click", dodajNaviku);
+    unosNavika.addEventListener("keydown", (dogadjaj) => {
+      if (dogadjaj.key === "Enter") dodajNaviku();
+    });
+
+    iscrtajNavike();
   </script>
 
 </body>

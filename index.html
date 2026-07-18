@@ -50,6 +50,40 @@
     font-size: 0.95rem;
   }
 
+  .zaglavlje-desno {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .zaglavlje-desno > * {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 20px;
+    border-right: 1px solid var(--border);
+  }
+
+  .zaglavlje-desno > *:last-child {
+    padding-right: 0;
+    border-right: none;
+  }
+
+  .widget-ikona {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  .widget-vrednost {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .widget-labela {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
   main {
     padding: 32px 40px;
     display: grid;
@@ -313,7 +347,20 @@
 
   <header>
     <h1>Lični <span>komandni centar</span></h1>
-    <div id="datum"></div>
+    <div class="zaglavlje-desno">
+      <div id="widget-vreme">
+        <span class="widget-ikona" id="vreme-ikona">–</span>
+        <span class="widget-vrednost" id="vreme-temp">–</span>
+        <span class="widget-labela">Derventa</span>
+      </div>
+      <div id="widget-kurs">
+        <span class="widget-labela">EUR/USD</span>
+        <span class="widget-vrednost" id="kurs-usd">–</span>
+        <span class="widget-labela">EUR/CHF</span>
+        <span class="widget-vrednost" id="kurs-chf">–</span>
+      </div>
+      <div id="datum"></div>
+    </div>
   </header>
 
   <main>
@@ -372,6 +419,57 @@
     const danas = new Date();
     const opcije = { weekday: "long", year: "numeric", month: "long", day: "numeric" };
     elementDatum.textContent = danas.toLocaleDateString("sr-Latn-RS", opcije);
+
+    /* ---------- WIDGET: VRIJEME (Open-Meteo, bez API ključa) ---------- */
+    const KOORDINATE_GRADA = { lat: 44.98, lon: 17.91 }; // Derventa
+
+    /* WMO weather_code -> ikonica. Grupe kodova su iz Open-Meteo dokumentacije. */
+    function ikonaZaVremenskiKod(kod) {
+      if (kod === 0) return "☀️";
+      if ([1, 2, 3].includes(kod)) return "⛅";
+      if ([45, 48].includes(kod)) return "🌫️";
+      if ([51, 53, 55, 56, 57].includes(kod)) return "🌦️";
+      if ([61, 63, 65, 66, 67, 80, 81, 82].includes(kod)) return "🌧️";
+      if ([71, 73, 75, 77, 85, 86].includes(kod)) return "🌨️";
+      if ([95, 96, 99].includes(kod)) return "⛈️";
+      return "🌡️";
+    }
+
+    async function ucitajVreme() {
+      const elementIkona = document.getElementById("vreme-ikona");
+      const elementTemp = document.getElementById("vreme-temp");
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${KOORDINATE_GRADA.lat}&longitude=${KOORDINATE_GRADA.lon}&current=temperature_2m,weather_code`;
+        const odgovor = await fetch(url);
+        if (!odgovor.ok) throw new Error("Server je odgovorio greškom");
+        const podaci = await odgovor.json();
+        elementIkona.textContent = ikonaZaVremenskiKod(podaci.current.weather_code);
+        elementTemp.textContent = Math.round(podaci.current.temperature_2m) + "°C";
+      } catch (greska) {
+        // Nema interneta, API ne radi ili je odgovor neispravan — crtica umjesto pada aplikacije.
+        elementIkona.textContent = "–";
+        elementTemp.textContent = "–";
+      }
+    }
+
+    /* ---------- WIDGET: KURSNA LISTA (frankfurter.app, bez API ključa) ---------- */
+    async function ucitajKurs() {
+      const elementUsd = document.getElementById("kurs-usd");
+      const elementChf = document.getElementById("kurs-chf");
+      try {
+        const odgovor = await fetch("https://api.frankfurter.app/latest?from=EUR&to=USD,CHF");
+        if (!odgovor.ok) throw new Error("Server je odgovorio greškom");
+        const podaci = await odgovor.json();
+        elementUsd.textContent = podaci.rates.USD.toFixed(2);
+        elementChf.textContent = podaci.rates.CHF.toFixed(2);
+      } catch (greska) {
+        elementUsd.textContent = "–";
+        elementChf.textContent = "–";
+      }
+    }
+
+    ucitajVreme();
+    ucitajKurs();
 
     const KLJUC_ZADACI = "komandni-centar-zadaci";
     const unosZadatak = document.getElementById("unos-zadatak");
